@@ -1,5 +1,14 @@
-import { CURRENCIES, ALL_CURRENCIES } from './constants';
-import { CurrencyCode } from '../types';
+import { CURRENCIES, ALL_CURRENCIES, getRate } from './constants';
+import type { CurrencyCode } from '../types';
+
+export const convertCurrency = (amount: number, from: CurrencyCode, to: CurrencyCode): number => {
+    if (from === to) return amount;
+    const fromRate = getRate(from);
+    const toRate = getRate(to);
+    // Convert to USD then to target
+    const inUSD = amount / fromRate;
+    return inUSD * toRate;
+};
 
 export const formatMoney = (amount: number, currency: CurrencyCode = 'USD'): string => {
     const c = ALL_CURRENCIES.find(x => x.code === currency);

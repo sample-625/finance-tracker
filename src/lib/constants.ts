@@ -77,3 +77,31 @@ export const MOODS = [
 ];
 
 export const ACCOUNT_ICONS = ['💳', '💵', '🏦', '💰', '🐷', '💎', '🪙', '📊', '📉', '📈'];
+
+export const MOCK_RATES: Record<string, number> = {
+    USD: 1,
+    EUR: 0.91,
+    GBP: 0.78,
+    RUB: 89.5,
+    UAH: 38.2,
+    JPY: 148.5,
+    CNY: 7.2,
+    KRW: 1340,
+    INR: 83.1,
+    BRL: 4.95,
+    BTC: 0.000021,
+    ETH: 0.0004,
+    USDT: 1,
+    USDC: 1,
+    BNB: 0.003,
+    XRP: 1.8,
+    SOL: 0.01,
+    ADA: 1.8,
+    DOGE: 12,
+    TON: 0.45,
+};
+
+// Fallback for missing rates
+export const getRate = (currency: string): number => {
+    return MOCK_RATES[currency] || 1;
+};

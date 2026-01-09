@@ -1,27 +1,26 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../context/StoreContext';
-import { formatMoney } from '../lib/utils'; // I will create utils next
+import { formatMoney, convertCurrency } from '../lib/utils';
 
 const Dashboard = () => {
     const { state } = useStore();
     const { mainCurrency } = state.settings;
 
-    // FIX: Calculate total balance from Accounts, not just transaction history
+    // FIX: Calculate total balance from Accounts, with currency conversion
     const totalBalance = useMemo(() => {
         return state.accounts.reduce((sum, acc) => {
-            // Simple sum for now, should handle currency conversion later
-            return sum + acc.balance;
+            return sum + convertCurrency(acc.balance, acc.currency, mainCurrency);
         }, 0);
-    }, [state.accounts]);
+    }, [state.accounts, mainCurrency]);
 
     const thisMonthLines = useMemo(() => {
         const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const f = state.transactions.filter(t => new Date(t.date) >= start);
         return {
-            income: f.filter(t => t.type === 'income').reduce((s, t) => s + (t.amountInMainCurrency || t.amount), 0),
-            expenses: f.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amountInMainCurrency || t.amount), 0)
+            income: f.filter(t => t.type === 'income').reduce((s, t) => s + convertCurrency(t.amount, t.currency, mainCurrency), 0),
+            expenses: f.filter(t => t.type === 'expense').reduce((s, t) => s + convertCurrency(t.amount, t.currency, mainCurrency), 0)
         };
-    }, [state.transactions]);
+    }, [state.transactions, mainCurrency]);
 
     const greeting = (() => {
         const hour = new Date().getHours();

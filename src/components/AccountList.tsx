@@ -58,6 +58,11 @@ const AccountList: React.FC<Props> = ({ onAddAccount, onEditAccount }) => {
                                     <div style={{ width: `${Math.min(100, (acc.balance / acc.principal) * 100)}%`, height: '100%', background: 'var(--danger)', borderRadius: '2px' }} />
                                 </div>
                             )}
+                            {acc.dueDate && (
+                                <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginTop: '4px', textAlign: 'right' }}>
+                                    До: {new Date(acc.dueDate).toLocaleDateString()}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

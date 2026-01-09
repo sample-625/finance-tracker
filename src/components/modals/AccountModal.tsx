@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
 import { useStore } from '../../context/StoreContext';
-import { Account, CurrencyCode } from '../../types';
+import type { Account, CurrencyCode } from '../../types';
 import { CURRENCIES, ACCOUNT_ICONS } from '../../lib/constants';
 
 interface Props {
@@ -193,7 +193,31 @@ const AccountModal: React.FC<Props> = ({ isOpen, onClose, initialData }) => {
                             }}
                         />
                     </div>
-                    {/* Min payment and due date can be added here if needed */}
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Минимальный платеж</label>
+                        <input
+                            type="number"
+                            value={minPayment}
+                            onChange={e => setMinPayment(e.target.value)}
+                            placeholder="0.00"
+                            style={{
+                                width: '100%', padding: '12px', borderRadius: 'var(--radius-md)',
+                                background: 'var(--bg-tertiary)', color: 'var(--text-primary)'
+                            }}
+                        />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Дата платежа</label>
+                        <input
+                            type="date"
+                            value={dueDate}
+                            onChange={e => setDueDate(e.target.value)}
+                            style={{
+                                width: '100%', padding: '12px', borderRadius: 'var(--radius-md)',
+                                background: 'var(--bg-tertiary)', color: 'var(--text-primary)'
+                            }}
+                        />
+                    </div>
                 </>
             )}
 
