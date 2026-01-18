@@ -19,7 +19,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQuer
 # ==================== CONFIG ====================
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8316242716:AAHSuHE0Wr_jeiREi9taX6uKP9cger2R28g")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/lifetracker")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://your-webapp-url.vercel.app") 
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://sample-625.github.io/finance-tracker/") 
 API_SECRET = os.getenv("API_SECRET", "your-secret-key-change-me")
 
 logging.basicConfig(level=logging.INFO)
