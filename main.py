@@ -17,7 +17,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 
 # ==================== CONFIG ====================
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8316242716:AAHSuHE0Wr_jeiREi9taX6uKP9cger2R28g")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "your-bot-token-here")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/lifetracker")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://sample-625.github.io/finance-tracker/") 
 API_SECRET = os.getenv("API_SECRET", "your-secret-key-change-me")
