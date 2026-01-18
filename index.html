@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Life Tracker</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        :root{--bg-primary:#0a0a0f;--bg-secondary:#12121a;--bg-tertiary:#1a1a25;--bg-card:#16161f;--text-primary:#fff;--text-secondary:#a0a0b0;--text-muted:#606070;--accent:#6366f1;--accent-glow:rgba(99,102,241,0.3);--success:#10b981;--danger:#ef4444;--warning:#f59e0b;--border:rgba(255,255,255,0.08);--radius:16px}
+        .light{--bg-primary:#f5f5f7;--bg-secondary:#fff;--bg-tertiary:#e8e8ed;--bg-card:#fff;--text-primary:#1a1a2e;--text-secondary:#64648c;--text-muted:#9898b0;--border:rgba(0,0,0,0.06)}
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden}
+        .app{min-height:100vh;padding-bottom:90px}
+        .header{padding:16px 20px;background:var(--bg-secondary);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+        .header-title{font-size:24px;font-weight:700;background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .header-sub{font-size:13px;color:var(--text-secondary);margin-top:2px}
+        .nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;padding:8px 4px 28px;z-index:1000}
+        .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px;color:var(--text-muted);cursor:pointer;transition:color .2s}
+        .nav-item.active{color:var(--accent)}
+        .nav-item svg{width:24px;height:24px;margin-bottom:4px}
+        .nav-item span{font-size:10px;font-weight:500}
+        .card{background:var(--bg-card);border-radius:var(--radius);padding:16px;margin:12px 16px;border:1px solid var(--border)}
+        .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+        .card-title{font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px}
+        .balance-card{background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%);border:none;padding:20px}
+        .balance-label{font-size:13px;color:rgba(255,255,255,0.8)}
+        .balance-amount{font-size:32px;font-weight:700;color:#fff;margin-top:4px}
+        .balance-row{display:flex;gap:12px;margin-top:16px}
+        .balance-stat{background:rgba(255,255,255,0.15);padding:12px;border-radius:12px;flex:1}
+        .balance-stat-label{font-size:11px;color:rgba(255,255,255,0.7)}
+        .balance-stat-value{font-size:14px;font-weight:600;color:#fff;margin-top:2px}
+        .list-item{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+        .list-item:last-child{border-bottom:none}
+        .list-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-right:12px;background:var(--bg-tertiary)}
+        .list-info{flex:1;min-width:0}
+        .list-title{font-size:15px;font-weight:500}
+        .list-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+        .list-value{font-size:15px;font-weight:600;margin-right:8px}
+        .list-value.income{color:var(--success)}
+        .list-value.expense{color:var(--danger)}
+        .list-actions{display:flex;gap:8px}
+        .action-btn{padding:8px 12px;border:none;background:var(--bg-tertiary);border-radius:8px;color:var(--text-secondary);cursor:pointer;font-size:14px}
+        .action-btn.delete{color:var(--danger)}
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 20px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:transform .1s,opacity .2s}
+        .btn:active{transform:scale(0.98)}
+        .btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+        .btn-secondary{background:var(--bg-tertiary);color:var(--text-primary)}
+        .btn-ghost{background:transparent;color:var(--accent);padding:8px 12px}
+        .btn-danger{background:rgba(239,68,68,0.15);color:var(--danger)}
+        .btn:disabled{opacity:.5;cursor:not-allowed}
+        .fab{position:fixed;bottom:100px;right:20px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 24px var(--accent-glow);z-index:99;display:flex;align-items:center;justify-content:center}
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);z-index:2000;display:flex;align-items:flex-end;animation:fadeIn .2s}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .modal{background:var(--bg-secondary);width:100%;max-height:90vh;border-radius:24px 24px 0 0;padding:20px;overflow-y:auto;animation:slideUp .3s}
+        @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+        .modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+        .modal-title{font-size:20px;font-weight:700;margin-bottom:20px}
+        .form-group{margin-bottom:16px}
+        .form-label{display:block;font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:8px}
+        .form-input{width:100%;padding:14px 16px;background:var(--bg-tertiary);border:2px solid var(--border);border-radius:12px;color:var(--text-primary);font-size:16px;font-family:inherit;transition:border-color .2s}
+        .form-input:focus{outline:none;border-color:var(--accent)}
+        .form-textarea{min-height:120px;resize:vertical}
+        select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a0a0b0' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+        .toggle-group{display:flex;background:var(--bg-tertiary);border-radius:12px;padding:4px}
+        .toggle-btn{flex:1;padding:12px;border:none;background:transparent;color:var(--text-secondary);font-size:14px;font-weight:500;border-radius:10px;cursor:pointer;font-family:inherit;transition:all .2s}
+        .toggle-btn.active{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+        .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:180px;overflow-y:auto}
+        .cat-item{display:flex;flex-direction:column;align-items:center;padding:12px 8px;background:var(--bg-tertiary);border-radius:12px;cursor:pointer;border:2px solid transparent;transition:all .2s}
+        .cat-item.selected{border-color:var(--accent);background:rgba(99,102,241,0.15)}
+        .cat-item span:first-child{font-size:24px}
+        .cat-item span:last-child{font-size:10px;color:var(--text-secondary);margin-top:4px;text-align:center}
+        .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+        .stat-card{background:var(--bg-tertiary);border-radius:12px;padding:16px}
+        .stat-label{font-size:12px;color:var(--text-muted)}
+        .stat-value{font-size:20px;font-weight:700;margin-top:4px}
+        .stat-value.positive{color:var(--success)}
+        .stat-value.negative{color:var(--danger)}
+        .progress-bar{height:8px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;margin-top:12px}
+        .progress-fill{height:100%;background:linear-gradient(90deg,#6366f1,#a855f7);border-radius:4px;transition:width .3s}
+        .empty{text-align:center;padding:40px 20px;color:var(--text-muted)}
+        .empty-icon{font-size:48px;margin-bottom:12px;opacity:.5}
+        .habit-check{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);margin-right:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+        .habit-check.done{background:var(--success);border-color:var(--success)}
+        .habit-check svg{width:18px;height:18px;color:#fff;opacity:0}
+        .habit-check.done svg{opacity:1}
+        .streak{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--warning);font-weight:600}
+        .mood-row{display:flex;justify-content:space-around;padding:16px;background:var(--bg-tertiary);border-radius:var(--radius)}
+        .mood-btn{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;border:2px solid transparent;transition:all .2s}
+        .mood-btn.selected{border-color:var(--accent);background:rgba(99,102,241,0.2);transform:scale(1.15)}
+        .tab-bar{display:flex;gap:8px;padding:0 16px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+        .tab-bar::-webkit-scrollbar{display:none}
+        .tab-btn{padding:10px 18px;background:var(--bg-tertiary);border:none;border-radius:20px;color:var(--text-secondary);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .2s}
+        .tab-btn.active{background:var(--accent);color:#fff}
+        .settings-item{display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--bg-tertiary);border-radius:12px;margin-bottom:8px}
+        .settings-label{font-size:15px;font-weight:500}
+        .settings-value{font-size:14px;color:var(--text-secondary)}
+        .switch{width:52px;height:28px;background:var(--bg-primary);border-radius:14px;position:relative;cursor:pointer;transition:background .2s}
+        .switch.on{background:var(--accent)}
+        .switch::after{content:'';position:absolute;width:24px;height:24px;background:#fff;border-radius:50%;top:2px;left:2px;transition:transform .2s}
+        .switch.on::after{transform:translateX(24px)}
+        .rate-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+        .rate-item{display:flex;justify-content:space-between;padding:10px 12px;background:var(--bg-tertiary);border-radius:10px;font-size:14px}
+        .rate-value{font-weight:600;font-family:monospace}
+        .note-card{background:var(--bg-tertiary);border-radius:12px;padding:16px;margin-bottom:12px;cursor:pointer}
+        .note-title{font-size:16px;font-weight:600;margin-bottom:6px}
+        .note-preview{font-size:14px;color:var(--text-secondary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        .note-date{font-size:12px;color:var(--text-muted);margin-top:8px}
+        .breathing-screen{position:fixed;inset:0;background:linear-gradient(180deg,#0f172a,#1e293b);z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center}
+        .breathing-close{position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;width:44px;height:44px;border-radius:50%;color:#fff;font-size:24px;cursor:pointer}
+        .breathing-circle{width:200px;height:200px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;transition:all 4s ease-in-out}
+        .breathing-circle.inhale{transform:scale(1.5);border-color:var(--success);background:rgba(16,185,129,0.1)}
+        .breathing-circle.hold{border-color:var(--warning);background:rgba(245,158,11,0.1)}
+        .breathing-circle.exhale{transform:scale(1);border-color:var(--accent);background:rgba(99,102,241,0.1)}
+        .breathing-text{font-size:28px;font-weight:300;color:#fff}
+        .breathing-count{font-size:16px;color:rgba(255,255,255,0.6);margin-top:32px}
+        .pattern-btns{display:flex;gap:12px;margin-top:24px}
+        .pattern-btn{padding:12px 20px;border-radius:24px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;font-size:14px;cursor:pointer}
+        .pattern-btn.active{background:rgba(255,255,255,0.2);border-color:#fff}
+        .breathing-start{margin-top:40px;padding:16px 48px;border-radius:30px;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:16px;font-weight:600;cursor:pointer}
+        .lang-select{display:flex;gap:8px}
+        .lang-btn{padding:10px 16px;border-radius:10px;border:2px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);font-size:14px;font-weight:500;cursor:pointer}
+        .lang-btn.active{border-color:var(--accent);background:rgba(99,102,241,0.15)}
+        .loading{display:flex;align-items:center;justify-content:center;height:100vh}
+        .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+    </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useCallback,useMemo,createContext,useContext}=React;
+
+// ==================== TRANSLATIONS ====================
+const translations={
+    ru:{
+        // General
+        app_name:'Life Tracker',
+        save:'Сохранить',
+        cancel:'Отмена',
+        delete:'Удалить',
+        edit:'Редактировать',
+        add:'Добавить',
+        all:'Все',
+        today:'Сегодня',
+        week:'Неделя',
+        month:'Месяц',
+        year:'Год',
+        // Nav
+        nav_home:'Главная',
+        nav_finance:'Финансы',
+        nav_goals:'Цели',
+        nav_habits:'Привычки',
+        nav_analytics:'Статистика',
+        nav_wellness:'Здоровье',
+        nav_notes:'Заметки',
+        nav_settings:'Ещё',
+        // Dashboard
+        total_balance:'Общий баланс',
+        income_month:'Доход (мес)',
+        expense_month:'Расход (мес)',
+        best_streak:'Лучшая серия!',
+        days:'дней',
+        habits:'Привычки',
+        mood:'Настроение',
+        recent_transactions:'Последние операции',
+        no_transactions:'Нет операций',
+        // Finance
+        transactions:'Операции',
+        accounts:'Счета',
+        investments:'Инвестиции',
+        debts:'Долги',
+        add_account_first:'Сначала добавьте счёт',
+        no_accounts:'Нет счетов',
+        no_investments:'Нет инвестиций',
+        no_debts:'Нет долгов',
+        new_transaction:'Новая операция',
+        expense:'Расход',
+        income:'Доход',
+        account:'Счёт',
+        select_account:'Выберите счёт',
+        amount:'Сумма',
+        currency:'Валюта',
+        category:'Категория',
+        description:'Описание',
+        date:'Дата',
+        optional:'Опционально',
+        new_account:'Новый счёт',
+        icon:'Иконка',
+        name:'Название',
+        balance:'Баланс',
+        new_investment:'Новый инвест счёт',
+        annual_rate:'Годовая ставка (%)',
+        new_debt:'Новый долг',
+        total_debt:'Общая сумма долга',
+        remaining:'Остаток',
+        interest_rate:'Процентная ставка (%)',
+        // Goals
+        my_goals:'Мои цели',
+        add_goal:'Добавить цель',
+        no_goals:'Нет целей',
+        new_goal:'Новая цель',
+        target_amount:'Целевая сумма',
+        saved_amount:'Уже накоплено',
+        // Habits
+        mood_title:'Настроение',
+        mood_calendar:'Календарь настроения',
+        habits_title:'Привычки',
+        add_habit:'Добавить привычку',
+        no_habits:'Нет привычек',
+        new_habit:'Новая привычка',
+        // Analytics
+        analytics_title:'Аналитика',
+        incomes:'Доходы',
+        expenses:'Расходы',
+        net:'Баланс',
+        habit_completion:'Привычки',
+        expenses_by_category:'Расходы по категориям',
+        // Wellness
+        practices:'Практики',
+        breathing:'Дыхательная практика',
+        compound_calc:'Калькулятор сложных процентов',
+        initial_amount:'Начальная сумма',
+        monthly_deposit:'Ежемесячное пополнение',
+        years:'лет',
+        total_amount:'Итоговая сумма',
+        invested:'Вложено',
+        profit:'Прибыль',
+        // Notes
+        notes_title:'Заметки',
+        no_notes:'Нет заметок',
+        new_note:'Новая заметка',
+        title:'Заголовок',
+        text:'Текст',
+        // Settings
+        settings_title:'Настройки',
+        dark_theme:'Тёмная тема',
+        language:'Язык',
+        main_currency:'Основная валюта',
+        exchange_rates:'Курсы валют',
+        updated:'Обновлено',
+        export_data:'Экспорт данных',
+        clear_all:'Очистить всё',
+        clear_confirm:'Удалить все данные?',
+        // Categories
+        cat_food:'Еда',
+        cat_transport:'Транспорт',
+        cat_shopping:'Покупки',
+        cat_entertainment:'Развлечения',
+        cat_health:'Здоровье',
+        cat_utilities:'Коммуналка',
+        cat_rent:'Аренда',
+        cat_subscriptions:'Подписки',
+        cat_education:'Учёба',
+        cat_other:'Другое',
+        cat_salary:'Зарплата',
+        cat_freelance:'Фриланс',
+        cat_investments:'Инвестиции',
+        cat_gifts:'Подарки',
+        cat_cashback:'Кэшбек',
+        // Breathing
+        ready:'Готовы?',
+        inhale:'Вдох',
+        hold:'Задержка',
+        exhale:'Выдох',
+        cycles:'Циклов',
+        start:'Старт',
+        stop:'Стоп',
+    },
+    en:{
+        app_name:'Life Tracker',
+        save:'Save',
+        cancel:'Cancel',
+        delete:'Delete',
+        edit:'Edit',
+        add:'Add',
+        all:'All',
+        today:'Today',
+        week:'Week',
+        month:'Month',
+        year:'Year',
+        nav_home:'Home',
+        nav_finance:'Finance',
+        nav_goals:'Goals',
+        nav_habits:'Habits',
+        nav_analytics:'Analytics',
+        nav_wellness:'Wellness',
+        nav_notes:'Notes',
+        nav_settings:'More',
+        total_balance:'Total Balance',
+        income_month:'Income (mo)',
+        expense_month:'Expense (mo)',
+        best_streak:'Best streak!',
+        days:'days',
+        habits:'Habits',
+        mood:'Mood',
+        recent_transactions:'Recent Transactions',
+        no_transactions:'No transactions',
+        transactions:'Transactions',
+        accounts:'Accounts',
+        investments:'Investments',
+        debts:'Debts',
+        add_account_first:'Add an account first',
+        no_accounts:'No accounts',
+        no_investments:'No investments',
+        no_debts:'No debts',
+        new_transaction:'New Transaction',
+        expense:'Expense',
+        income:'Income',
+        account:'Account',
+        select_account:'Select account',
+        amount:'Amount',
+        currency:'Currency',
+        category:'Category',
+        description:'Description',
+        date:'Date',
+        optional:'Optional',
+        new_account:'New Account',
+        icon:'Icon',
+        name:'Name',
+        balance:'Balance',
+        new_investment:'New Investment',
+        annual_rate:'Annual Rate (%)',
+        new_debt:'New Debt',
+        total_debt:'Total Debt',
+        remaining:'Remaining',
+        interest_rate:'Interest Rate (%)',
+        my_goals:'My Goals',
+        add_goal:'Add goal',
+        no_goals:'No goals',
+        new_goal:'New Goal',
+        target_amount:'Target amount',
+        saved_amount:'Already saved',
+        mood_title:'Mood',
+        mood_calendar:'Mood Calendar',
+        habits_title:'Habits',
+        add_habit:'Add habit',
+        no_habits:'No habits',
+        new_habit:'New Habit',
+        analytics_title:'Analytics',
+        incomes:'Income',
+        expenses:'Expenses',
+        net:'Balance',
+        habit_completion:'Habits',
+        expenses_by_category:'Expenses by Category',
+        practices:'Practices',
+        breathing:'Breathing Exercise',
+        compound_calc:'Compound Interest Calculator',
+        initial_amount:'Initial amount',
+        monthly_deposit:'Monthly deposit',
+        years:'years',
+        total_amount:'Total amount',
+        invested:'Invested',
+        profit:'Profit',
+        notes_title:'Notes',
+        no_notes:'No notes',
+        new_note:'New Note',
+        title:'Title',
+        text:'Text',
+        settings_title:'Settings',
+        dark_theme:'Dark Theme',
+        language:'Language',
+        main_currency:'Main Currency',
+        exchange_rates:'Exchange Rates',
+        updated:'Updated',
+        export_data:'Export Data',
+        clear_all:'Clear All',
+        clear_confirm:'Delete all data?',
+        cat_food:'Food',
+        cat_transport:'Transport',
+        cat_shopping:'Shopping',
+        cat_entertainment:'Entertainment',
+        cat_health:'Health',
+        cat_utilities:'Utilities',
+        cat_rent:'Rent',
+        cat_subscriptions:'Subscriptions',
+        cat_education:'Education',
+        cat_other:'Other',
+        cat_salary:'Salary',
+        cat_freelance:'Freelance',
+        cat_investments:'Investments',
+        cat_gifts:'Gifts',
+        cat_cashback:'Cashback',
+        ready:'Ready?',
+        inhale:'Inhale',
+        hold:'Hold',
+        exhale:'Exhale',
+        cycles:'Cycles',
+        start:'Start',
+        stop:'Stop',
+    },
+    es:{
+        app_name:'Life Tracker',
+        save:'Guardar',
+        cancel:'Cancelar',
+        delete:'Eliminar',
+        edit:'Editar',
+        add:'Añadir',
+        all:'Todo',
+        today:'Hoy',
+        week:'Semana',
+        month:'Mes',
+        year:'Año',
+        nav_home:'Inicio',
+        nav_finance:'Finanzas',
+        nav_goals:'Metas',
+        nav_habits:'Hábitos',
+        nav_analytics:'Análisis',
+        nav_wellness:'Salud',
+        nav_notes:'Notas',
+        nav_settings:'Más',
+        total_balance:'Balance Total',
+        income_month:'Ingreso (mes)',
+        expense_month:'Gasto (mes)',
+        best_streak:'¡Mejor racha!',
+        days:'días',
+        habits:'Hábitos',
+        mood:'Ánimo',
+        recent_transactions:'Transacciones Recientes',
+        no_transactions:'Sin transacciones',
+        transactions:'Transacciones',
+        accounts:'Cuentas',
+        investments:'Inversiones',
+        debts:'Deudas',
+        add_account_first:'Primero añade una cuenta',
+        no_accounts:'Sin cuentas',
+        no_investments:'Sin inversiones',
+        no_debts:'Sin deudas',
+        new_transaction:'Nueva Transacción',
+        expense:'Gasto',
+        income:'Ingreso',
+        account:'Cuenta',
+        select_account:'Seleccionar cuenta',
+        amount:'Cantidad',
+        currency:'Moneda',
+        category:'Categoría',
+        description:'Descripción',
+        date:'Fecha',
+        optional:'Opcional',
+        new_account:'Nueva Cuenta',
+        icon:'Icono',
+        name:'Nombre',
+        balance:'Balance',
+        new_investment:'Nueva Inversión',
+        annual_rate:'Tasa Anual (%)',
+        new_debt:'Nueva Deuda',
+        total_debt:'Deuda Total',
+        remaining:'Restante',
+        interest_rate:'Tasa de Interés (%)',
+        my_goals:'Mis Metas',
+        add_goal:'Añadir meta',
+        no_goals:'Sin metas',
+        new_goal:'Nueva Meta',
+        target_amount:'Cantidad objetivo',
+        saved_amount:'Ya ahorrado',
+        mood_title:'Ánimo',
+        mood_calendar:'Calendario de Ánimo',
+        habits_title:'Hábitos',
+        add_habit:'Añadir hábito',
+        no_habits:'Sin hábitos',
+        new_habit:'Nuevo Hábito',
+        analytics_title:'Análisis',
+        incomes:'Ingresos',
+        expenses:'Gastos',
+        net:'Balance',
+        habit_completion:'Hábitos',
+        expenses_by_category:'Gastos por Categoría',
+        practices:'Prácticas',
+        breathing:'Ejercicio de Respiración',
+        compound_calc:'Calculadora de Interés Compuesto',
+        initial_amount:'Cantidad inicial',
+        monthly_deposit:'Depósito mensual',
+        years:'años',
+        total_amount:'Cantidad total',
+        invested:'Invertido',
+        profit:'Ganancia',
+        notes_title:'Notas',
+        no_notes:'Sin notas',
+        new_note:'Nueva Nota',
+        title:'Título',
+        text:'Texto',
+        settings_title:'Ajustes',
+        dark_theme:'Tema Oscuro',
+        language:'Idioma',
+        main_currency:'Moneda Principal',
+        exchange_rates:'Tipos de Cambio',
+        updated:'Actualizado',
+        export_data:'Exportar Datos',
+        clear_all:'Borrar Todo',
+        clear_confirm:'¿Eliminar todos los datos?',
+        cat_food:'Comida',
+        cat_transport:'Transporte',
+        cat_shopping:'Compras',
+        cat_entertainment:'Entretenimiento',
+        cat_health:'Salud',
+        cat_utilities:'Servicios',
+        cat_rent:'Alquiler',
+        cat_subscriptions:'Suscripciones',
+        cat_education:'Educación',
+        cat_other:'Otro',
+        cat_salary:'Salario',
+        cat_freelance:'Freelance',
+        cat_investments:'Inversiones',
+        cat_gifts:'Regalos',
+        cat_cashback:'Cashback',
+        ready:'¿Listo?',
+        inhale:'Inhalar',
+        hold:'Mantener',
+        exhale:'Exhalar',
+        cycles:'Ciclos',
+        start:'Iniciar',
+        stop:'Parar',
+    }
+};
+
+const LangContext=createContext();
+const useLang=()=>useContext(LangContext);
+
+// ==================== CONSTANTS ====================
+const CURRENCIES={
+    fiat:[
+        {code:'USD',symbol:'$',name:'Dollar'},
+        {code:'EUR',symbol:'€',name:'Euro'},
+        {code:'RUB',symbol:'₽',name:'Ruble'},
+        {code:'UAH',symbol:'₴',name:'Hryvnia'},
+        {code:'GBP',symbol:'£',name:'Pound'},
+        {code:'PLN',symbol:'zł',name:'Zloty'},
+    ],
+    crypto:[
+        {code:'BTC',symbol:'₿',name:'Bitcoin',isCrypto:true},
+        {code:'ETH',symbol:'Ξ',name:'Ethereum',isCrypto:true},
+        {code:'USDT',symbol:'₮',name:'Tether',isCrypto:true},
+        {code:'TON',symbol:'💎',name:'Toncoin',isCrypto:true},
+    ]
+};
+const ALL_CURRENCIES=[...CURRENCIES.fiat,...CURRENCIES.crypto];
+const CRYPTO_CODES=CURRENCIES.crypto.map(c=>c.code);
+
+const getCategories=(t)=>({
+    expense:[
+        {id:'food',name:t('cat_food'),emoji:'🍔',color:'#ef4444'},
+        {id:'transport',name:t('cat_transport'),emoji:'🚗',color:'#3b82f6'},
+        {id:'shopping',name:t('cat_shopping'),emoji:'🛍️',color:'#8b5cf6'},
+        {id:'entertainment',name:t('cat_entertainment'),emoji:'🎮',color:'#ec4899'},
+        {id:'health',name:t('cat_health'),emoji:'💊',color:'#10b981'},
+        {id:'utilities',name:t('cat_utilities'),emoji:'💡',color:'#f59e0b'},
+        {id:'rent',name:t('cat_rent'),emoji:'🏠',color:'#6366f1'},
+        {id:'subscriptions',name:t('cat_subscriptions'),emoji:'📱',color:'#14b8a6'},
+        {id:'education',name:t('cat_education'),emoji:'📚',color:'#a855f7'},
+        {id:'other_exp',name:t('cat_other'),emoji:'📦',color:'#64748b'},
+    ],
+    income:[
+        {id:'salary',name:t('cat_salary'),emoji:'💼',color:'#10b981'},
+        {id:'freelance',name:t('cat_freelance'),emoji:'💻',color:'#3b82f6'},
+        {id:'investments',name:t('cat_investments'),emoji:'📈',color:'#8b5cf6'},
+        {id:'gifts_in',name:t('cat_gifts'),emoji:'🎁',color:'#f43f5e'},
+        {id:'cashback',name:t('cat_cashback'),emoji:'💸',color:'#f59e0b'},
+        {id:'other_inc',name:t('cat_other'),emoji:'✨',color:'#64748b'},
+    ]
+});
+
+const MOODS=[{id:1,emoji:'😢'},{id:2,emoji:'😕'},{id:3,emoji:'😐'},{id:4,emoji:'🙂'},{id:5,emoji:'😄'}];
+
+// ==================== CURRENCY API ====================
+const DEFAULT_RATES={USD:1,EUR:0.92,RUB:103,UAH:42,GBP:0.79,PLN:4.02,BTC:97000,ETH:3400,USDT:1,TON:5.5};
+
+const CurrencyAPI={
+    rates:{...DEFAULT_RATES},
+    lastFetch:null,
+    
+    async fetchRates(){
+        if(this.lastFetch&&Date.now()-this.lastFetch<600000)return this.rates;
+        try{
+            const r=await fetch('https://api.frankfurter.app/latest?from=USD');
+            if(r.ok){const d=await r.json();this.rates={...this.rates,...d.rates};}
+        }catch(e){console.error(e);}
+        try{
+            const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,the-open-network&vs_currencies=usd');
+            if(r.ok){
+                const d=await r.json();
+                this.rates.BTC=d.bitcoin?.usd||97000;
+                this.rates.ETH=d.ethereum?.usd||3400;
+                this.rates.USDT=d.tether?.usd||1;
+                this.rates.TON=d['the-open-network']?.usd||5.5;
+            }
+        }catch(e){console.error(e);}
+        this.lastFetch=Date.now();
+        return this.rates;
+    },
+    
+    convert(amt,from,to){
+        if(from===to)return amt;
+        let usd=CRYPTO_CODES.includes(from)?amt*(this.rates[from]||1):amt/(this.rates[from]||1);
+        return CRYPTO_CODES.includes(to)?usd/(this.rates[to]||1):usd*(this.rates[to]||1);
+    }
+};
+
+// ==================== STORAGE ====================
+const STORAGE_KEY='lifeTrackerData';
+
+const Storage={
+    async load(){
+        const keys=[STORAGE_KEY,'lifeTrackerV3','lifeTrackerV2','lifeTracker'];
+        for(const key of keys){
+            try{
+                let data=null;
+                if(window.Telegram?.WebApp?.CloudStorage){
+                    data=await new Promise(r=>window.Telegram.WebApp.CloudStorage.getItem(key,(e,v)=>{
+                        try{r(v?JSON.parse(v):null);}catch{r(null);}
+                    }));
+                }else{
+                    const v=localStorage.getItem(key);
+                    if(v)try{data=JSON.parse(v);}catch{}
+                }
+                if(data&&Object.keys(data).length>0&&(data.accounts?.length||data.habits?.length||data.transactions?.length)){
+                    if(key!==STORAGE_KEY)await this.save(data);
+                    return data;
+                }
+            }catch(e){console.error('Load error:',key,e);}
+        }
+        return null;
+    },
+    
+    async save(data){
+        const s=JSON.stringify(data);
+        try{
+            if(window.Telegram?.WebApp?.CloudStorage){
+                await new Promise(r=>window.Telegram.WebApp.CloudStorage.setItem(STORAGE_KEY,s,r));
+            }else{
+                localStorage.setItem(STORAGE_KEY,s);
+            }
+        }catch(e){console.error('Save error:',e);}
+    }
+};
+
+// ==================== HELPERS ====================
+const fmt=(n,c='USD')=>{
+    const curr=ALL_CURRENCIES.find(x=>x.code===c);
+    const isCrypto=CRYPTO_CODES.includes(c);
+    const formatted=Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:isCrypto?6:2});
+    return `${n<0?'-':''}${curr?.symbol||c}${formatted}`;
+};
+const fmtDate=(d,lang='en')=>new Date(d).toLocaleDateString(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-US',{day:'numeric',month:'short'});
+const today=()=>new Date().toISOString().split('T')[0];
+const getStreak=(dates)=>{
+    if(!dates?.length)return 0;
+    const sorted=[...dates].sort((a,b)=>new Date(b)-new Date(a));
+    const t=today(),y=new Date(Date.now()-86400000).toISOString().split('T')[0];
+    if(sorted[0]!==t&&sorted[0]!==y)return 0;
+    let s=1;
+    for(let i=1;i<sorted.length;i++){
+        if((new Date(sorted[i-1])-new Date(sorted[i]))/86400000===1)s++;
+        else break;
+    }
+    return s;
+};
+
+// ==================== ICONS ====================
+const Icons={
+    Home:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+    Wallet:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>,
+    Target:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+    Check:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+    Chart:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    Heart:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>,
+    File:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+    Settings:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+    CheckMark:()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>,
+};
+
+// ==================== COMPONENTS ====================
+const Modal=({open,onClose,title,children})=>{
+    if(!open)return null;
+    return(
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={e=>e.stopPropagation()}>
+                <div className="modal-handle"/>
+                <div className="modal-title">{title}</div>
+                {children}
+            </div>
+        </div>
+    );
+};
+
+// ==================== BREATHING ====================
+const BreathingScreen=({onClose})=>{
+    const{t}=useLang();
+    const[phase,setPhase]=useState('ready');
+    const[running,setRunning]=useState(false);
+    const[cycles,setCycles]=useState(0);
+    const[pattern,setPattern]=useState([4,4,4,4]);
+    const phaseNames=[t('inhale'),t('hold'),t('exhale'),t('hold')];
+    const phaseClasses=['inhale','hold','exhale','hold'];
+
+    useEffect(()=>{
+        if(!running)return;
+        let idx=0,timer=pattern[0];
+        setPhase(phaseClasses[0]);
+        const interval=setInterval(()=>{
+            timer--;
+            if(timer<=0){
+                idx=(idx+1)%4;
+                while(pattern[idx]===0)idx=(idx+1)%4;
+                if(idx===0)setCycles(c=>c+1);
+                timer=pattern[idx];
+                setPhase(phaseClasses[idx]);
+            }
+        },1000);
+        return()=>clearInterval(interval);
+    },[running,pattern]);
+
+    return(
+        <div className="breathing-screen">
+            <button className="breathing-close" onClick={onClose}>×</button>
+            <div className={`breathing-circle ${running?phase:''}`}>
+                <span className="breathing-text">{running?phaseNames[phaseClasses.indexOf(phase)]:t('ready')}</span>
+            </div>
+            <p className="breathing-count">{cycles>0&&`${t('cycles')}: ${cycles}`}</p>
+            <div className="pattern-btns">
+                {[['4-4-4-4',[4,4,4,4]],['4-7-8',[4,7,8,0]],['5-5',[5,0,5,0]]].map(([name,p])=>(
+                    <button key={name} className={`pattern-btn ${JSON.stringify(pattern)===JSON.stringify(p)?'active':''}`} onClick={()=>setPattern(p)}>{name}</button>
+                ))}
+            </div>
+            <button className="breathing-start" onClick={()=>{setRunning(!running);if(!running)setCycles(0);}}>{running?t('stop'):t('start')}</button>
+        </div>
+    );
+};
+
+// ==================== DASHBOARD ====================
+const Dashboard=({data,balances,setTab})=>{
+    const{t,lang}=useLang();
+    const main=data.settings?.mainCurrency||'USD';
+    const total=balances.accounts+balances.investments;
+    
+    const monthStats=useMemo(()=>{
+        const start=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+        const f=data.transactions.filter(tx=>new Date(tx.date)>=start);
+        return{
+            income:f.filter(tx=>tx.type==='income').reduce((s,tx)=>s+(tx.convertedAmount||tx.amount),0),
+            expense:f.filter(tx=>tx.type==='expense').reduce((s,tx)=>s+(tx.convertedAmount||tx.amount),0)
+        };
+    },[data.transactions]);
+    
+    const todayHabits=data.habits.filter(h=>h.completedDates?.includes(today())).length;
+    const maxStreak=Math.max(0,...data.habits.map(h=>getStreak(h.completedDates)));
+    const todayMood=data.moods?.find(m=>m.date===today());
+    const CATEGORIES=getCategories(t);
+    const allCats=[...CATEGORIES.expense,...CATEGORIES.income];
+    const recent=[...data.transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+
+    return(
+        <div>
+            <div className="header">
+                <div className="header-title">{t('app_name')}</div>
+                <div className="header-sub">{new Date().toLocaleDateString(lang==='ru'?'ru-RU':lang==='es'?'es-ES':'en-US',{weekday:'long',day:'numeric',month:'long'})}</div>
+            </div>
+            
+            <div className="card balance-card">
+                <div className="balance-label">{t('total_balance')}</div>
+                <div className="balance-amount">{fmt(total,main)}</div>
+                <div className="balance-row">
+                    <div className="balance-stat">
+                        <div className="balance-stat-label">{t('income_month')}</div>
+                        <div className="balance-stat-value">+{fmt(monthStats.income,main)}</div>
+                    </div>
+                    <div className="balance-stat">
+                        <div className="balance-stat-label">{t('expense_month')}</div>
+                        <div className="balance-stat-value">-{fmt(monthStats.expense,main)}</div>
+                    </div>
+                </div>
+            </div>
+            
+            {maxStreak>0&&(
+                <div className="card" style={{background:'linear-gradient(135deg,#f59e0b,#ef4444)',border:'none',display:'flex',alignItems:'center',gap:'12px'}}>
+                    <span style={{fontSize:'40px'}}>🔥</span>
+                    <div>
+                        <div style={{fontSize:'28px',fontWeight:'800',color:'#fff'}}>{maxStreak} {t('days')}</div>
+                        <div style={{fontSize:'14px',color:'rgba(255,255,255,0.9)'}}>{t('best_streak')}</div>
+                    </div>
+                </div>
+            )}
+            
+            <div className="card">
+                <div className="card-header"><span className="card-title">{t('today')}</span></div>
+                <div className="stat-grid">
+                    <div className="stat-card"><div className="stat-label">{t('habits')}</div><div className="stat-value">{todayHabits}/{data.habits.length}</div></div>
+                    <div className="stat-card"><div className="stat-label">{t('mood')}</div><div className="stat-value">{todayMood?MOODS.find(m=>m.id===todayMood.mood)?.emoji:'—'}</div></div>
+                </div>
+            </div>
+            
+            <div className="card">
+                <div className="card-header">
+                    <span className="card-title">{t('recent_transactions')}</span>
+                    <button className="btn btn-ghost" onClick={()=>setTab('finance')}>{t('all')}</button>
+                </div>
+                {recent.length===0?(
+                    <div className="empty"><div className="empty-icon">💸</div><div>{t('no_transactions')}</div></div>
+                ):recent.map(tx=>{
+                    const cat=allCats.find(c=>c.id===tx.categoryId);
+                    return(
+                        <div key={tx.id} className="list-item">
+                            <div className="list-icon" style={{background:cat?.color+'20'}}>{cat?.emoji||'📝'}</div>
+                            <div className="list-info">
+                                <div className="list-title">{tx.description||cat?.name}</div>
+                                <div className="list-sub">{fmtDate(tx.date,lang)}</div>
+                            </div>
+                            <div className={`list-value ${tx.type}`}>{tx.type==='income'?'+':'-'}{fmt(tx.amount,tx.currency)}</div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// ==================== FINANCE ====================
+const FinanceTab=({data,setData,refresh})=>{
+    const{t,lang}=useLang();
+    const[subTab,setSubTab]=useState('transactions');
+    const[modal,setModal]=useState(null);
+    const[editItem,setEditItem]=useState(null);
+    const[type,setType]=useState('expense');
+    const[loading,setLoading]=useState(false);
+    const main=data.settings?.mainCurrency||'USD';
+    const CATEGORIES=getCategories(t);
+    
+    const[form,setForm]=useState({amount:'',categoryId:'',description:'',currency:main,date:today(),accountId:''});
+    const[accForm,setAccForm]=useState({name:'',currency:'USD',balance:'',icon:'💳'});
+    const[invForm,setInvForm]=useState({name:'',currency:'USD',balance:'',rate:''});
+    const[debtForm,setDebtForm]=useState({name:'',total:'',remaining:'',rate:'',description:''});
+
+    const openNew=(type)=>{
+        setEditItem(null);
+        if(type==='transaction')setForm({amount:'',categoryId:'',description:'',currency:main,date:today(),accountId:data.accounts[0]?.id||''});
+        else if(type==='account')setAccForm({name:'',currency:'USD',balance:'',icon:'💳'});
+        else if(type==='investment')setInvForm({name:'',currency:'USD',balance:'',rate:''});
+        else if(type==='debt')setDebtForm({name:'',total:'',remaining:'',rate:'',description:''});
+        setModal(type);
+    };
+
+    const openEdit=(item,itemType)=>{
+        setEditItem({...item,itemType});
+        if(itemType==='transaction'){setType(item.type);setForm({amount:String(item.amount),categoryId:item.categoryId,description:item.description||'',currency:item.currency,date:item.date,accountId:item.accountId||''});}
+        else if(itemType==='account')setAccForm({name:item.name,currency:item.currency,balance:String(item.balance),icon:item.icon});
+        else if(itemType==='investment')setInvForm({name:item.name,currency:item.currency,balance:String(item.balance),rate:String(item.rate)});
+        else if(itemType==='debt')setDebtForm({name:item.name,total:String(item.total),remaining:String(item.remaining),rate:String(item.rate),description:item.description||''});
+        setModal(itemType);
+    };
+
+    const saveTx=async()=>{
+        if(!form.amount||!form.categoryId||!form.accountId)return;
+        setLoading(true);
+        await CurrencyAPI.fetchRates();
+        const amount=parseFloat(form.amount);
+        const account=data.accounts.find(a=>a.id===form.accountId);
+        if(!account){setLoading(false);return;}
+        
+        const amtInAcc=CurrencyAPI.convert(amount,form.currency,account.currency);
+        const converted=CurrencyAPI.convert(amount,form.currency,main);
+        
+        const tx={id:editItem?.id||Date.now().toString(),type,amount,convertedAmount:converted,categoryId:form.categoryId,description:form.description,currency:form.currency,date:form.date,accountId:form.accountId};
+        
+        let accounts=[...data.accounts];
+        const accIdx=accounts.findIndex(a=>a.id===form.accountId);
+        
+        if(editItem?.itemType==='transaction'){
+            const old=data.transactions.find(t=>t.id===editItem.id);
+            if(old?.accountId){
+                const oldIdx=accounts.findIndex(a=>a.id===old.accountId);
+                if(oldIdx!==-1){
+                    const oldAmt=CurrencyAPI.convert(old.amount,old.currency,accounts[oldIdx].currency);
+                    accounts[oldIdx]={...accounts[oldIdx],balance:accounts[oldIdx].balance+(old.type==='income'?-oldAmt:oldAmt)};
+                }
+            }
+        }
+        
+        if(accIdx!==-1)accounts[accIdx]={...accounts[accIdx],balance:accounts[accIdx].balance+(type==='income'?amtInAcc:-amtInAcc)};
+        
+        const txs=editItem?.itemType==='transaction'?data.transactions.filter(t=>t.id!==editItem.id):data.transactions;
+        setData({...data,transactions:[...txs,tx],accounts});
+        setLoading(false);setModal(null);setEditItem(null);refresh();
+    };
+
+    const saveAcc=()=>{
+        if(!accForm.name)return;
+        const acc={id:editItem?.id||Date.now().toString(),...accForm,balance:parseFloat(accForm.balance)||0};
+        const accs=editItem?.itemType==='account'?data.accounts.filter(a=>a.id!==editItem.id):data.accounts;
+        setData({...data,accounts:[...accs,acc]});
+        setModal(null);setEditItem(null);refresh();
+    };
+
+    const saveInv=()=>{
+        if(!invForm.name)return;
+        const inv={id:editItem?.id||Date.now().toString(),...invForm,balance:parseFloat(invForm.balance)||0,rate:parseFloat(invForm.rate)||0};
+        const invs=editItem?.itemType==='investment'?(data.investments||[]).filter(i=>i.id!==editItem.id):(data.investments||[]);
+        setData({...data,investments:[...invs,inv]});
+        setModal(null);setEditItem(null);refresh();
+    };
+
+    const saveDebt=()=>{
+        if(!debtForm.name||!debtForm.total)return;
+        const debt={id:editItem?.id||Date.now().toString(),...debtForm,total:parseFloat(debtForm.total),remaining:parseFloat(debtForm.remaining)||parseFloat(debtForm.total),rate:parseFloat(debtForm.rate)||0};
+        const debts=editItem?.itemType==='debt'?(data.debts||[]).filter(d=>d.id!==editItem.id):(data.debts||[]);
+        setData({...data,debts:[...debts,debt]});
+        setModal(null);setEditItem(null);
+    };
+
+    const del=(id,delType)=>{
+        if(delType==='transaction'){
+            const tx=data.transactions.find(t=>t.id===id);
+            let accounts=[...data.accounts];
+            if(tx?.accountId){
+                const idx=accounts.findIndex(a=>a.id===tx.accountId);
+                if(idx!==-1){
+                    const amt=CurrencyAPI.convert(tx.amount,tx.currency,accounts[idx].currency);
+                    accounts[idx]={...accounts[idx],balance:accounts[idx].balance+(tx.type==='income'?-amt:amt)};
+                }
+            }
+            setData({...data,transactions:data.transactions.filter(t=>t.id!==id),accounts});
+        }else if(delType==='account')setData({...data,accounts:data.accounts.filter(a=>a.id!==id)});
+        else if(delType==='investment')setData({...data,investments:(data.investments||[]).filter(i=>i.id!==id)});
+        else if(delType==='debt')setData({...data,debts:(data.debts||[]).filter(d=>d.id!==id)});
+        refresh();
+    };
+
+    const allCats=[...CATEGORIES.expense,...CATEGORIES.income];
+    const getAccName=(id)=>{const a=data.accounts.find(x=>x.id===id);return a?`${a.icon} ${a.name}`:''};
+
+    return(
+        <div>
+            <div className="header"><div className="header-title">{t('nav_finance')}</div></div>
+            
+            <div className="tab-bar">
+                {[['transactions',`💸 ${t('transactions')}`],['accounts',`💳 ${t('accounts')}`],['investments',`📈 ${t('investments')}`],['debts',`💰 ${t('debts')}`]].map(([key,label])=>(
+                    <button key={key} className={`tab-btn ${subTab===key?'active':''}`} onClick={()=>setSubTab(key)}>{label}</button>
+                ))}
+            </div>
+
+            {subTab==='transactions'&&(
+                <div className="card">
+                    <div className="card-header"><span className="card-title">{t('transactions')}</span></div>
+                    {data.accounts.length===0?(
+                        <div className="empty"><div className="empty-icon">💳</div><div>{t('add_account_first')}</div></div>
+                    ):data.transactions.length===0?(
+                        <div className="empty"><div className="empty-icon">📊</div><div>{t('no_transactions')}</div></div>
+                    ):[...data.transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>{
+                        const cat=allCats.find(c=>c.id===tx.categoryId);
+                        return(
+                            <div key={tx.id} className="list-item">
+                                <div className="list-icon" style={{background:cat?.color+'20'}}>{cat?.emoji||'📝'}</div>
+                                <div className="list-info">
+                                    <div className="list-title">{tx.description||cat?.name}</div>
+                                    <div className="list-sub">{fmtDate(tx.date,lang)} • {getAccName(tx.accountId)}</div>
+                                </div>
+                                <div className={`list-value ${tx.type}`}>{tx.type==='income'?'+':'-'}{fmt(tx.amount,tx.currency)}</div>
+                                <div className="list-actions">
+                                    <button className="action-btn" onClick={()=>openEdit(tx,'transaction')}>✏️</button>
+                                    <button className="action-btn delete" onClick={()=>del(tx.id,'transaction')}>🗑️</button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {subTab==='accounts'&&(
+                <div className="card">
+                    <div className="card-header"><span className="card-title">{t('accounts')}</span><button className="btn btn-ghost" onClick={()=>openNew('account')}>+ {t('add')}</button></div>
+                    {data.accounts.length===0?(
+                        <div className="empty"><div className="empty-icon">💳</div><div>{t('no_accounts')}</div></div>
+                    ):data.accounts.map(a=>(
+                        <div key={a.id} className="list-item">
+                            <div className="list-icon">{a.icon}</div>
+                            <div className="list-info"><div className="list-title">{a.name}</div><div className="list-sub">{a.currency}</div></div>
+                            <div className="list-value">{fmt(a.balance,a.currency)}</div>
+                            <div className="list-actions">
+                                <button className="action-btn" onClick={()=>openEdit(a,'account')}>✏️</button>
+                                <button className="action-btn delete" onClick={()=>del(a.id,'account')}>🗑️</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {subTab==='investments'&&(
+                <div className="card">
+                    <div className="card-header"><span className="card-title">{t('investments')}</span><button className="btn btn-ghost" onClick={()=>openNew('investment')}>+ {t('add')}</button></div>
+                    {(data.investments||[]).length===0?(
+                        <div className="empty"><div className="empty-icon">📈</div><div>{t('no_investments')}</div></div>
+                    ):data.investments.map(i=>(
+                        <div key={i.id} className="list-item">
+                            <div className="list-icon">📈</div>
+                            <div className="list-info"><div className="list-title">{i.name}</div><div className="list-sub">{i.currency} • {i.rate}%</div></div>
+                            <div className="list-value" style={{color:'var(--success)'}}>{fmt(i.balance,i.currency)}</div>
+                            <div className="list-actions">
+                                <button className="action-btn" onClick={()=>openEdit(i,'investment')}>✏️</button>
+                                <button className="action-btn delete" onClick={()=>del(i.id,'investment')}>🗑️</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {subTab==='debts'&&(
+                <div className="card">
+                    <div className="card-header"><span className="card-title">{t('debts')}</span><button className="btn btn-ghost" onClick={()=>openNew('debt')}>+ {t('add')}</button></div>
+                    {(data.debts||[]).length===0?(
+                        <div className="empty"><div className="empty-icon">💰</div><div>{t('no_debts')}</div></div>
+                    ):data.debts.map(d=>(
+                        <div key={d.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border)'}}>
+                            <div className="list-item" style={{padding:0,border:'none'}}>
+                                <div className="list-icon">💰</div>
+                                <div className="list-info"><div className="list-title">{d.name}</div><div className="list-sub">{d.rate}% • {fmt(d.total,main)}</div></div>
+                                <div className="list-value" style={{color:'var(--danger)'}}>{fmt(d.remaining,main)}</div>
+                                <div className="list-actions">
+                                    <button className="action-btn" onClick={()=>openEdit(d,'debt')}>✏️</button>
+                                    <button className="action-btn delete" onClick={()=>del(d.id,'debt')}>🗑️</button>
+                                </div>
+                            </div>
+                            <div className="progress-bar"><div className="progress-fill" style={{width:`${((d.total-d.remaining)/d.total)*100}%`,background:'var(--success)'}}/></div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <button className="fab" onClick={()=>openNew('transaction')}>+</button>
+
+            <Modal open={modal==='transaction'} onClose={()=>{setModal(null);setEditItem(null);}} title={editItem?t('edit'):t('new_transaction')}>
+                {data.accounts.length===0?(
+                    <div className="empty"><div className="empty-icon">💳</div><div>{t('add_account_first')}</div></div>
+                ):(
+                    <>
+                        <div className="form-group"><div className="toggle-group"><button className={`toggle-btn ${type==='expense'?'active':''}`} onClick={()=>setType('expense')}>{t('expense')}</button><button className={`toggle-btn ${type==='income'?'active':''}`} onClick={()=>setType('income')}>{t('income')}</button></div></div>
+                        <div className="form-group"><label className="form-label">{t('account')}</label><select className="form-input" value={form.accountId} onChange={e=>setForm({...form,accountId:e.target.value})}><option value="">{t('select_account')}</option>{data.accounts.map(a=><option key={a.id} value={a.id}>{a.icon} {a.name} ({fmt(a.balance,a.currency)})</option>)}</select></div>
+                        <div className="form-group"><label className="form-label">{t('amount')}</label><input type="number" className="form-input" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} step="any"/></div>
+                        <div className="form-group"><label className="form-label">{t('currency')}</label><select className="form-input" value={form.currency} onChange={e=>setForm({...form,currency:e.target.value})}>{ALL_CURRENCIES.map(c=><option key={c.code} value={c.code}>{c.symbol} {c.code}</option>)}</select></div>
+                        <div className="form-group"><label className="form-label">{t('category')}</label><div className="cat-grid">{CATEGORIES[type].map(c=><div key={c.id} className={`cat-item ${form.categoryId===c.id?'selected':''}`} onClick={()=>setForm({...form,categoryId:c.id})}><span>{c.emoji}</span><span>{c.name}</span></div>)}</div></div>
+                        <div className="form-group"><label className="form-label">{t('description')}</label><input type="text" className="form-input" placeholder={t('optional')} value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></div>
+                        <div className="form-group"><label className="form-label">{t('date')}</label><input type="date" className="form-input" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/></div>
+                        <button className="btn btn-primary" style={{width:'100%'}} onClick={saveTx} disabled={loading||!form.accountId}>{loading?<span className="spinner"/>:t('save')}</button>
+                    </>
+                )}
+            </Modal>
+
+            <Modal open={modal==='account'} onClose={()=>{setModal(null);setEditItem(null);}} title={editItem?t('edit'):t('new_account')}>
+                <div className="form-group"><label className="form-label">{t('icon')}</label><div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>{['💳','💵','🏦','💰','🐷','💎'].map(i=><div key={i} className={`cat-item ${accForm.icon===i?'selected':''}`} style={{width:'48px',padding:'12px'}} onClick={()=>setAccForm({...accForm,icon:i})}>{i}</div>)}</div></div>
+                <div className="form-group"><label className="form-label">{t('name')}</label><input type="text" className="form-input" value={accForm.name} onChange={e=>setAccForm({...accForm,name:e.target.value})}/></div>
+                <div className="form-group"><label className="form-label">{t('currency')}</label><select className="form-input" value={accForm.currency} onChange={e=>setAccForm({...accForm,currency:e.target.value})}>{ALL_CURRENCIES.map(c=><option key={c.code} value={c.code}>{c.symbol} {c.code}</option>)}</select></div>
+                <div className="form-group"><label className="form-label">{t('balance')}</label><input type="number" className="form-input" value={accForm.balance} onChange={e=>setAccForm({...accForm,balance:e.target.value})} step="any"/></div>
+                <button className="btn btn-primary" style={{width:'100%'}} onClick={saveAcc}>{t('save')}</button>
+            </Modal>
+
+            <Modal open={modal==='investment'} onClose={()=>{setModal(null);setEditItem(null);}} title={editItem?t('edit'):t('new_investment')}>
+                <div className="form-group"><label className="form-label">{t('name')}</label><input type="text" className="form-input" value={invForm.name} onChange={e=>setInvForm({...invForm,name:e.target.value})}/></div>
+                <div className="form-group"><label className="form-label">{t('currency')}</label><select className="form-input" value={invForm.currency} onChange={e=>setInvForm({...invForm,currency:e.target.value})}>{ALL_CURRENCIES.map(c=><option key={c.code} value={c.code}>{c.symbol} {c.code}</option>)}</select></div>
+                <div className="form-group"><label className="form-label">{t('balance')}</label><input type="number" className="form-input" value={invForm.balance} onChange={e=>setInvForm({...invForm,balance:e.target.value})} step="any"/></div>
+                <div className="form-group"><label className="form-label">{t('annual_rate')}</label><input type="number" className="form-input" value={invForm.rate} onChange={e=>setInvForm({...invForm,rate:e.target.value})}/></div>
+                <button className="btn btn-primary" style={{width:'100%'}} onClick={saveInv}>{t('save')}</button>
+            </Modal>
+
+            <Modal open={modal==='debt'} onClose={()=>{setModal(null);setEditItem(null);}} title={editItem?t('edit'):t('new_debt')}>
+                <div className="form-group"><label className="form-label">{t('name')}</label><input type="text" className="form-input" value={debtForm.name} onChange={e=>setDebtForm({...debtForm,name:e.target.value})}/></div>
+                <div className="form-group"><label className="form-label">{t('total_debt')}</label><input type="number" className="form-input" value={debtForm.total} onChange={e=>setDebtForm({...debtForm,total:e.target.value})}/></div>
+                <div className="form-group"><label className="form-label">{t('remaining')}</label><input type="number" className="form-input" value={debtForm.remaining} onChange={e=>setDebtForm({...debtForm,remaining:e.target.value})}/></div>
+                <div className="form-group"><label className="form-label">{t('interest_rate')}</label><input type="number" className="form-input" value={debtForm.rate} onChange={e=>setDebtForm({...debtForm,rate:e.target.value})}/></div>
+                <div className="form-group"><label className="form-label">{t('description')}</label><input type="text" className="form-input" placeholder={t('optional')} value={debtForm.description} onChange={e=>setDebtForm({...debtForm,description:e.target.value})}/></div>
+                <button className="btn btn-primary" style={{width:'100%'}} onClick={saveDebt}>{t('save')}</button>
+            </Modal>
+        </div>
+    );
+};
+
+// ==================== GOALS ====================
+const GoalsTab=({data,setData})=>{
+    const{t}=useLang();
+    const[modal,setModal]=useState(false);
+    const[editItem,setEditItem]=useState(null);
+    const main=data.settings?.mainCurrency||'USD';
+    const[form,setForm]=useState({name:'',target:'',current:'',emoji:'🎯'});
+
+    const openEdit=(g)=>{setEditItem(g);setForm({name:g.name,target:String(g.target),current:String(g.current),emoji:g.emoji});setModal(true);};
+    const save=()=>{
+        if(!form.name||!form.target)return;
+        const goal={id:editItem?.id||Date.now().toString(),...form,target:parseFloat(form.target),current:parseFloat(form.current)||0};
+        const goals=editItem?(data.goals||[]).filter(g=>g.id!==editItem.id):(data.goals||[]);
+        setData({...data,goals:[...goals,goal]});
+        setModal(false);setEditItem(null);setForm({name:'',target:'',current:'',emoji:'🎯'});
+    };
+    const del=(id)=>setData({...data,goals:(data.goals||[]).filter(g=>g.id!==id)});
+
+    return(
+        <div>
+            <div className="header"><div className="header-title">{t('nav_goals')}</div></div>
+            <div className="card">
+                <div className="card-header"><span className="card-title">{t('my_goals')}</span><button className="btn btn-ghost" onClick={()=>{setEditItem(null);setForm({name:'',target:'',current:'',emoji:'🎯'});setModal(true);}}>+ {t('add')}</button></div>
+                {(data.goals||[]).length===0?(
+                    <div className="empty"><div className="empty-icon">🎯</div><div>{t('no_goals')}</div></div>
+                ):data.goals.map(g=>{
+                    const pct=Math.min((g.current/g.target)*100,100);
+                    return(
+                        <div key={g.id} style={{padding:'12px 0',borderBottom:'1px solid var(--border)'}}>
+                            <div className="list-item" style={{padding:0,border:'none'}}>
+                                <div className="list-icon">{g.emoji}</div>
+                                <div className="list-info"><div className="list-title">{g.name}</div><div className="list-sub">{fmt(g.current,main)} / {fmt(g.target,main)}</div></div>
+                                <span style={{fontSize:'14px',fontWeight:'600',color:'var(--accent)'}}>{pct.toFixed(0)}%</span>
+                                <div className="list-actions">
+                                    <button className="action-btn" onClick={()=>openEdit(g)}>✏️</button>
+                                    <button className="action-btn delete" onClick={()=>del(g.id)}>🗑️</button>
+                                </div>
+                            </div>
+                            <div className="progress-bar"><div className="progress-fill" style={{width:`${pct}%`}}/></div>
+                        </div>
+                    );
+                })}
+            </div>
+            <Modal open={modal} onClose={()=>{setModal(false);setEditItem(null);}} title={editItem?t('edit'):t('new_goal')}>
+                <div className="form-group"><label className="form-label">{t('icon')}</label><div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>{['🎯','🏠','🚗','✈️','💻','📱','🎓','💍','🏝️'].map(e=><div key={e} className={`cat-item ${form.emoji===e?'selected':''}`} style={{width:'48px',padding:'12px'}} onClick={()=>setForm({...form,emoji:e})}>{e}</div>)}</div></div>
+                <div className="form-group"><label className="form-label">{t('name')}</label><input type="text" className="form-input" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
+                <div className="form-group"><label className="form-label">{t('target_amount')}</label><input type="number" className="form-input" value={form.target} onChange={e=>setForm({...form,target:e.target.value})}/></div>
+                <div className="form-group"><label className="form-label">{t('saved_amount')}</label><input type="number" className="form-input" value={form.current} onChange={e=>setForm({...form,current:e.target.value})}/></div>
+                <button className="btn btn-primary" style={{width:'100%'}} onClick={save}>{t('save')}</button>
+            </Modal>
+        </div>
+    );
+};
+
+// ==================== HABITS ====================
+const HabitsTab=({data,setData})=>{
+    const{t}=useLang();
+    const[modal,setModal]=useState(false);
+    const[editItem,setEditItem]=useState(null);
+    const[form,setForm]=useState({name:'',emoji:'✅'});
+    const td=today();
+    const todayMood=data.moods?.find(m=>m.date===td);
+
+    const openEdit=(h)=>{setEditItem(h);setForm({name:h.name,emoji:h.emoji});setModal(true);};
+    const toggle=(id)=>setData({...data,habits:data.habits.map(h=>h.id===id?{...h,completedDates:h.completedDates?.includes(td)?h.completedDates.filter(d=>d!==td):[...(h.completedDates||[]),td]}:h)});
+    const setMood=(id)=>setData({...data,moods:[...(data.moods||[]).filter(m=>m.date!==td),{date:td,mood:id}]});
+    const save=()=>{
+        if(!form.name)return;
+        const habit={id:editItem?.id||Date.now().toString(),...form,completedDates:editItem?.completedDates||[]};
+        const habits=editItem?data.habits.filter(h=>h.id!==editItem.id):data.habits;
+        setData({...data,habits:[...habits,habit]});
+        setModal(false);setEditItem(null);setForm({name:'',emoji:'✅'});
+    };
+    const del=(id)=>setData({...data,habits:data.habits.filter(h=>h.id!==id)});
+
+    return(
+        <div>
+            <div className="header"><div className="header-title">{t('nav_habits')}</div></div>
+            <div className="card">
+                <div className="card-header"><span className="card-title">{t('mood_title')}</span></div>
+                <div className="mood-row">{MOODS.map(m=><div key={m.id} className={`mood-btn ${todayMood?.mood===m.id?'selected':''}`} onClick={()=>setMood(m.id)}>{m.emoji}</div>)}</div>
+            </div>
+            <div className="card">
+                <div className="card-header"><span className="card-title">{t('habits_title')}</span><button className="btn btn-ghost" onClick={()=>{setEditItem(null);setForm({name:'',emoji:'✅'});setModal(true);}}>+ {t('add')}</button></div>
+                {data.habits.length===0?(
+                    <div className="empty"><div className="empty-icon">🎯</div><div>{t('no_habits')}</div></div>
+                ):data.habits.map(h=>{
+                    const done=h.completedDates?.includes(td);
+                    const streak=getStreak(h.completedDates);
+                    return(
+                        <div key={h.id} className="list-item">
+                            <div className={`habit-check ${done?'done':''}`} onClick={()=>toggle(h.id)}><Icons.CheckMark/></div>
+                            <div className="list-info"><div className="list-title">{h.emoji} {h.name}</div>{streak>0&&<div className="streak">🔥 {streak} {t('days')}</div>}</div>
+                            <div className="list-actions">
+                                <button className="action-btn" onClick={()=>openEdit(h)}>✏️</button>
+                                <button className="action-btn delete" onClick={()=>del(h.id)}>🗑️</button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+            <Modal open={modal} onClose={()=>{setModal(false);setEditItem(null);}} title={editItem?t('edit'):t('new_habit')}>
+                <div className="form-group"><label className="form-label">{t('icon')}</label><div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>{['✅','💪','📚','🏃','💧','🧘','😴','🥗','💊','🎯'].map(e=><div key={e} className={`cat-item ${form.emoji===e?'selected':''}`} style={{width:'48px',padding:'12px'}} onClick={()=>setForm({...form,emoji:e})}>{e}</div>)}</div></div>
+                <div className="form-group"><label className="form-label">{t('name')}</label><input type="text" className="form-input" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
+                <button className="btn btn-primary" style={{width:'100%'}} onClick={save}>{t('save')}</button>
+            </Modal>
+        </div>
+    );
+};
+
+// ==================== ANALYTICS ====================
+const AnalyticsTab=({data})=>{
+    const{t}=useLang();
+    const[period,setPeriod]=useState('week');
+    const main=data.settings?.mainCurrency||'USD';
+    
+    const stats=useMemo(()=>{
+        const now=new Date();
+        let start,days;
+        if(period==='week'){start=new Date(now.getTime()-7*86400000);days=7;}
+        else if(period==='month'){start=new Date(now.getTime()-30*86400000);days=30;}
+        else{start=new Date(now.getTime()-365*86400000);days=365;}
+        
+        const f=data.transactions.filter(tx=>new Date(tx.date)>=start);
+        const income=f.filter(tx=>tx.type==='income').reduce((s,tx)=>s+(tx.convertedAmount||tx.amount),0);
+        const expense=f.filter(tx=>tx.type==='expense').reduce((s,tx)=>s+(tx.convertedAmount||tx.amount),0);
+        const habitRate=data.habits.length>0?data.habits.reduce((s,h)=>s+((h.completedDates||[]).filter(d=>new Date(d)>=start).length/days),0)/data.habits.length*100:0;
+        
+        return{income,expense,balance:income-expense,habitRate};
+    },[data,period]);
+
+    return(
+        <div>
+            <div className="header"><div className="header-title">{t('analytics_title')}</div></div>
+            <div className="tab-bar">
+                {[['week',t('week')],['month',t('month')],['year',t('year')]].map(([key,label])=>(
+                    <button key={key} className={`tab-btn ${period===key?'active':''}`} onClick={()=>setPeriod(key)}>{label}</button>
+                ))}
+            </div>
+            <div className="card">
+                <div className="stat-grid">
+                    <div className="stat-card"><div className="stat-label">{t('incomes')}</div><div className="stat-value positive">+{fmt(stats.income,main)}</div></div>
+                    <div className="stat-card"><div className="stat-label">{t('expenses')}</div><div className="stat-value negative">-{fmt(stats.expense,main)}</div></div>
+                    <div className="stat-card"><div className="stat-label">{t('net')}</div><div className={`stat-value ${stats.balance>=0?'positive':'negative'}`}>{stats.balance>=0?'+':''}{fmt(stats.balance,main)}</div></div>
+                    <div className="stat-card"><div className="stat-label">{t('habit_completion')}</div><div className="stat-value">{stats.habitRate.toFixed(0)}%</div></div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ==================== WELLNESS ====================
+const WellnessTab=({data})=>{
+    const{t}=useLang();
+    const[screen,setScreen]=useState(null);
+    const[calc,setCalc]=useState({principal:'',rate:'',years:'',monthly:''});
+    const main=data.settings?.mainCurrency||'USD';
+
+    const result=useMemo(()=>{
+        const p=parseFloat(calc.principal)||0;
+        const r=(parseFloat(calc.rate)||0)/100;
+        const y=parseFloat(calc.years)||0;
+        const m=parseFloat(calc.monthly)||0;
+        if(p===0&&m===0)return null;
+        let total=p*Math.pow(1+r/12,12*y);
+        if(m>0&&r>0)total+=m*((Math.pow(1+r/12,12*y)-1)/(r/12));
+        else if(m>0)total+=m*12*y;
+        const invested=p+m*12*y;
+        return{total,invested,profit:total-invested};
+    },[calc]);
+
+    if(screen==='breathing')return<BreathingScreen onClose={()=>setScreen(null)}/>;
+
+    return(
+        <div>
+            <div className="header"><div className="header-title">{t('nav_wellness')}</div></div>
+            <div className="card">
+                <div className="card-header"><span className="card-title">{t('practices')}</span></div>
+                <button className="btn btn-secondary" style={{width:'100%',padding:'24px',flexDirection:'column'}} onClick={()=>setScreen('breathing')}>
+                    <span style={{fontSize:'36px',marginBottom:'8px'}}>🌬️</span>
+                    <span>{t('breathing')}</span>
+                </button>
+            </div>
+            <div className="card">
+                <div className="card-header"><span className="card-title">💰 {t('compound_calc')}</span></div>
+                <div className="form-group"><label className="form-label">{t('initial_amount')}</label><input type="number" className="form-input" value={calc.principal} onChange={e=>setCalc({...calc,principal:e.target.value})}/></div>
+                <div className="form-group"><label className="form-label">{t('monthly_deposit')}</label><input type="number" className="form-input" value={calc.monthly} onChange={e=>setCalc({...calc,monthly:e.target.value})}/></div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+                    <div className="form-group"><label className="form-label">{t('annual_rate')}</label><input type="number" className="form-input" value={calc.rate} onChange={e=>setCalc({...calc,rate:e.target.value})}/></div>
+                    <div className="form-group"><label className="form-label">{t('years')}</label><input type="number" className="form-input" value={calc.years} onChange={e=>setCalc({...calc,years:e.target.value})}/></div>
+                </div>
+                {result&&(
+                    <div style={{background:'var(--bg-tertiary)',borderRadius:'var(--radius)',padding:'20px',marginTop:'16px',textAlign:'center'}}>
+                        <div style={{fontSize:'28px',fontWeight:'700',color:'var(--success)'}}>{fmt(result.total,main)}</div>
+                        <div style={{fontSize:'13px',color:'var(--text-secondary)',marginTop:'4px'}}>{t('total_amount')}</div>
+                        <div className="stat-grid" style={{marginTop:'16px'}}>
+                            <div className="stat-card"><div className="stat-label">{t('invested')}</div><div className="stat-value">{fmt(result.invested,main)}</div></div>
+                            <div className="stat-card"><div className="stat-label">{t('profit')}</div><div className="stat-value positive">+{fmt(result.profit,main)}</div></div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// ==================== NOTES ====================
+const NotesTab=({data,setData})=>{
+    const{t,lang}=useLang();
+    const[modal,setModal]=useState(false);
+    const[editItem,setEditItem]=useState(null);
+    const[form,setForm]=useState({title:'',content:''});
+    const[viewNote,setViewNote]=useState(null);
+
+    const openEdit=(n)=>{setEditItem(n);setForm({title:n.title,content:n.content});setModal(true);};
+    const save=()=>{
+        if(!form.content)return;
+        const note={id:editItem?.id||Date.now().toString(),title:form.title||'Untitled',content:form.content,createdAt:editItem?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+        const notes=editItem?(data.notes||[]).filter(n=>n.id!==editItem.id):(data.notes||[]);
+        setData({...data,notes:[note,...notes]});
+        setModal(false);setEditItem(null);setForm({title:'',content:''});
+    };
+    const del=(id)=>setData({...data,notes:(data.notes||[]).filter(n=>n.id!==id)});
+
+    if(viewNote){
+        const note=(data.notes||[]).find(n=>n.id===viewNote);
+        if(!note){setViewNote(null);return null;}
+        return(
+            <div>
+                <div className="header">
+                    <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                        <button className="btn btn-ghost" onClick={()=>setViewNote(null)}>←</button>
+                        <div className="header-title">{note.title}</div>
+                    </div>
+                </div>
+                <div className="card"><div style={{whiteSpace:'pre-wrap',lineHeight:'1.6'}}>{note.content}</div></div>
+                <div style={{display:'flex',gap:'8px',padding:'0 16px'}}>
+                    <button className="btn btn-secondary" style={{flex:1}} onClick={()=>{openEdit(note);setViewNote(null);}}>✏️ {t('edit')}</button>
+                    <button className="btn btn-danger" onClick={()=>{del(note.id);setViewNote(null);}}>🗑️</button>
+                </div>
+            </div>
+        );
+    }
+
+    return(
+        <div>
+            <div className="header"><div className="header-title">{t('notes_title')}</div></div>
+            <div className="card">
+                {(data.notes||[]).length===0?(
+                    <div className="empty"><div className="empty-icon">📝</div><div>{t('no_notes')}</div></div>
+                ):(data.notes||[]).map(n=>(
+                    <div key={n.id} className="note-card" onClick={()=>setViewNote(n.id)}>
+                        <div className="note-title">{n.title}</div>
+                        <div className="note-preview">{n.content}</div>
+                        <div className="note-date">{fmtDate(n.createdAt,lang)}</div>
+                    </div>
+                ))}
+            </div>
+            <button className="fab" onClick={()=>{setEditItem(null);setForm({title:'',content:''});setModal(true);}}>+</button>
+            <Modal open={modal} onClose={()=>{setModal(false);setEditItem(null);}} title={editItem?t('edit'):t('new_note')}>
+                <div className="form-group"><label className="form-label">{t('title')}</label><input type="text" className="form-input" placeholder={t('optional')} value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></div>
+                <div className="form-group"><label className="form-label">{t('text')}</label><textarea className="form-input form-textarea" value={form.content} onChange={e=>setForm({...form,content:e.target.value})}/></div>
+                <button className="btn btn-primary" style={{width:'100%'}} onClick={save}>{t('save')}</button>
+            </Modal>
+        </div>
+    );
+};
+
+// ==================== SETTINGS ====================
+const SettingsTab=({data,setData,isDark,setIsDark,lang,setLang})=>{
+    const{t}=useLang();
+    const[rates,setRates]=useState(CurrencyAPI.rates);
+    const[lastUpdate,setLastUpdate]=useState(CurrencyAPI.lastFetch);
+    const main=data.settings?.mainCurrency||'USD';
+    
+    const refreshRates=async()=>{await CurrencyAPI.fetchRates();setRates({...CurrencyAPI.rates});setLastUpdate(Date.now());};
+    useEffect(()=>{refreshRates();},[]);
+
+    const displayRates=useMemo(()=>ALL_CURRENCIES.filter(c=>c.code!==main).map(c=>({...c,rate:CurrencyAPI.convert(1,c.code,main)})),[rates,main]);
+    const exportData=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download='life-tracker-backup.json';a.click();};
+    const clearData=()=>{if(confirm(t('clear_confirm')))setData({accounts:[],transactions:[],habits:[],moods:[],goals:[],investments:[],debts:[],notes:[],settings:{mainCurrency:'USD',language:'ru'}});};
+
+    return(
+        <div>
+            <div className="header"><div className="header-title">{t('settings_title')}</div></div>
+            
+            <div className="card">
+                <div className="settings-item">
+                    <span className="settings-label">🌙 {t('dark_theme')}</span>
+                    <div className={`switch ${isDark?'on':''}`} onClick={()=>setIsDark(!isDark)}/>
+                </div>
+            </div>
+            
+            <div className="card">
+                <div className="card-header"><span className="card-title">🌐 {t('language')}</span></div>
+                <div className="lang-select">
+                    {[['ru','🇷🇺 Русский'],['en','🇬🇧 English'],['es','🇪🇸 Español']].map(([code,label])=>(
+                        <button key={code} className={`lang-btn ${lang===code?'active':''}`} onClick={()=>{setLang(code);setData({...data,settings:{...data.settings,language:code}});}}>{label}</button>
+                    ))}
+                </div>
+            </div>
+            
+            <div className="card">
+                <div className="card-header"><span className="card-title">{t('main_currency')}</span></div>
+                <select className="form-input" value={main} onChange={e=>setData({...data,settings:{...data.settings,mainCurrency:e.target.value}})}>{CURRENCIES.fiat.map(c=><option key={c.code} value={c.code}>{c.symbol} {c.code}</option>)}</select>
+            </div>
+            
+            <div className="card">
+                <div className="card-header"><span className="card-title">💱 {t('exchange_rates')}</span><button className="btn btn-ghost" onClick={refreshRates}>🔄</button></div>
+                <div style={{fontSize:'12px',color:'var(--text-muted)',marginBottom:'12px'}}>1 unit = X {main} {lastUpdate&&`• ${t('updated')}: ${new Date(lastUpdate).toLocaleTimeString()}`}</div>
+                <div className="rate-grid">
+                    {displayRates.map(r=>(
+                        <div key={r.code} className="rate-item">
+                            <span>{r.symbol} {r.code}</span>
+                            <span className="rate-value">{r.isCrypto?fmt(r.rate,main):r.rate.toFixed(4)}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            
+            <div className="card">
+                <button className="btn btn-secondary" style={{width:'100%',marginBottom:'10px'}} onClick={exportData}>📦 {t('export_data')}</button>
+                <button className="btn btn-danger" style={{width:'100%'}} onClick={clearData}>🗑️ {t('clear_all')}</button>
+            </div>
+            
+            <div className="card" style={{textAlign:'center',color:'var(--text-muted)'}}>
+                <div style={{fontSize:'16px',fontWeight:'600'}}>Life Tracker</div>
+                <div style={{fontSize:'13px',marginTop:'4px'}}>Alpha 2.0</div>
+            </div>
+        </div>
+    );
+};
+
+// ==================== MAIN APP ====================
+const App=()=>{
+    const[tab,setTab]=useState('home');
+    const[isDark,setIsDark]=useState(false);
+    const[lang,setLang]=useState('ru');
+    const[data,setData]=useState({accounts:[],transactions:[],habits:[],moods:[],goals:[],investments:[],debts:[],notes:[],settings:{mainCurrency:'USD',language:'ru'}});
+    const[loaded,setLoaded]=useState(false);
+    const[balances,setBalances]=useState({accounts:0,investments:0});
+
+    const t=(key)=>translations[lang]?.[key]||translations.ru[key]||key;
+
+    const refresh=useCallback(async()=>{
+        await CurrencyAPI.fetchRates();
+        const main=data.settings?.mainCurrency||'USD';
+        const accTotal=data.accounts.reduce((s,a)=>s+CurrencyAPI.convert(a.balance,a.currency,main),0);
+        const invTotal=(data.investments||[]).reduce((s,i)=>s+CurrencyAPI.convert(i.balance,i.currency,main),0);
+        setBalances({accounts:accTotal,investments:invTotal});
+    },[data]);
+
+    useEffect(()=>{
+        if(window.Telegram?.WebApp){window.Telegram.WebApp.ready();window.Telegram.WebApp.expand();setIsDark(window.Telegram.WebApp.colorScheme==='dark');}
+    },[]);
+
+    useEffect(()=>{
+        (async()=>{
+            await CurrencyAPI.fetchRates();
+            const saved=await Storage.load();
+            if(saved){setData(saved);if(saved.settings?.language)setLang(saved.settings.language);}
+            setLoaded(true);
+        })();
+    },[]);
+
+    useEffect(()=>{if(loaded){Storage.save(data);refresh();}},[data,loaded]);
+    useEffect(()=>{document.body.className=isDark?'':'light';},[isDark]);
+
+    if(!loaded)return<div className="loading"><div className="spinner"/></div>;
+
+    const navItems=[
+        {id:'home',icon:Icons.Home,label:t('nav_home')},
+        {id:'finance',icon:Icons.Wallet,label:t('nav_finance')},
+        {id:'goals',icon:Icons.Target,label:t('nav_goals')},
+        {id:'habits',icon:Icons.Check,label:t('nav_habits')},
+        {id:'analytics',icon:Icons.Chart,label:t('nav_analytics')},
+        {id:'wellness',icon:Icons.Heart,label:t('nav_wellness')},
+        {id:'notes',icon:Icons.File,label:t('nav_notes')},
+        {id:'settings',icon:Icons.Settings,label:t('nav_settings')},
+    ];
+
+    return(
+        <LangContext.Provider value={{t,lang}}>
+            <div className="app">
+                {tab==='home'&&<Dashboard data={data} balances={balances} setTab={setTab}/>}
+                {tab==='finance'&&<FinanceTab data={data} setData={setData} refresh={refresh}/>}
+                {tab==='goals'&&<GoalsTab data={data} setData={setData}/>}
+                {tab==='habits'&&<HabitsTab data={data} setData={setData}/>}
+                {tab==='analytics'&&<AnalyticsTab data={data}/>}
+                {tab==='wellness'&&<WellnessTab data={data}/>}
+                {tab==='notes'&&<NotesTab data={data} setData={setData}/>}
+                {tab==='settings'&&<SettingsTab data={data} setData={setData} isDark={isDark} setIsDark={setIsDark} lang={lang} setLang={setLang}/>}
+                
+                <nav className="nav">
+                    {navItems.map(item=>(
+                        <div key={item.id} className={`nav-item ${tab===item.id?'active':''}`} onClick={()=>setTab(item.id)}>
+                            <item.icon/><span>{item.label}</span>
+                        </div>
+                    ))}
+                </nav>
+            </div>
+        </LangContext.Provider>
+    );
+};
+
+ReactDOM.render(<App/>,document.getElementById('root'));
+</script>
+</body>
+</html>
