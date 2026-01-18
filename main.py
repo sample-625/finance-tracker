@@ -13,13 +13,13 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import String, BigInteger, DateTime, Boolean, Text, select, update, JSON
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, Bot
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 
 # ==================== CONFIG ====================
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8316242716:AAHSuHE0Wr_jeiREi9taX6uKP9cger2R28g")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/lifetracker")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://your-webapp-url.vercel.app")  # Update this!
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://your-webapp-url.vercel.app") 
 API_SECRET = os.getenv("API_SECRET", "your-secret-key-change-me")
 
 logging.basicConfig(level=logging.INFO)
@@ -60,6 +60,15 @@ class HabitReminder(Base):
     reminded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
 
+class MoodEntry(Base):
+    __tablename__ = "mood_entries"
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow) # Stored as date at midnight
+    score: Mapped[int] = mapped_column() # 1-5
+    note: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
 # Database engine
 engine = create_async_engine(DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://"))
 async_session = async_sessionmaker(engine, expire_on_commit=False)
@@ -79,7 +88,7 @@ MESSAGES = {
         "welcome": "👋 Привет, {name}!\n\n🚀 Добро пожаловать в **Life Tracker** — твой персональный помощник для управления финансами, привычками и целями!\n\n✨ **Что умеет приложение:**\n💰 Отслеживание доходов и расходов\n🎯 Постановка и контроль целей\n✅ Трекер привычек с напоминаниями\n📊 Аналитика и статистика\n📝 Заметки\n\n👇 Нажми кнопку ниже, чтобы открыть приложение:",
         "open_app": "📱 Открыть Life Tracker",
         "settings": "⚙️ Настройки",
-        "notifications_on": "🔔 Уведомления включены",
+        "notifications_on": "�� Уведомления включены",
         "notifications_off": "🔕 Уведомления выключены",
         "habit_reminder": "⏰ Напоминание!\n\nТы ещё не выполнил привычку **{habit}** сегодня.\n\nОткрой приложение и отметь выполнение! 💪",
         "habit_completed": "🎉 Молодец!\n\nПривычка **{habit}** выполнена!\n\n🔥 Так держать! Твоя серия продолжается!",
@@ -87,7 +96,11 @@ MESSAGES = {
         "weekly_report": "📊 **Еженедельный отчёт**\n\n💰 Доходы: +{income}\n💸 Расходы: -{expense}\n📈 Баланс: {balance}\n\n✅ Привычки выполнены: {habits_done}/{habits_total}\n🔥 Лучшая серия: {best_streak} дней",
         "settings_menu": "⚙️ **Настройки**\n\nУведомления: {notif_status}\nЯзык: {lang}",
         "toggle_notifications": "🔔 Вкл/Выкл уведомления",
-        "help": "📖 **Помощь**\n\n/start — Главное меню\n/app — Открыть приложение\n/settings — Настройки\n/stats — Твоя статистика\n\nПо вопросам: @your_support",
+        "help": "📖 **Помощь**\n\n/start — Главное меню\n/app — Открыть приложение\n/settings — Настройки\n/stats — Твоя статистика\n/mood — Календарь настроения\n\nПо вопросам: @your_support",
+        "ask_mood": "🎭 **Как прошёл твой день?**\n\nОтметь своё настроение:",
+        "mood_saved": "✅ Настроение сохранено: {mood}\n\nСпасибо за отметку!",
+        "mood_calendar_title": "📅 **Твой календарь настроения**\n\n",
+        "spending_alert": "💸 **Аномалия расходов!**\n\nТы потратил **{amount}** сегодня, что значительно выше твоего среднего ({avg}).\n\nДержим руку на пульсе! ��",
     },
     "en": {
         "welcome": "👋 Hi, {name}!\n\n🚀 Welcome to **Life Tracker** — your personal assistant for managing finances, habits and goals!\n\n✨ **Features:**\n💰 Income & expense tracking\n🎯 Goals setting & tracking\n✅ Habit tracker with reminders\n📊 Analytics & statistics\n📝 Notes\n\n👇 Tap the button below to open the app:",
@@ -101,7 +114,11 @@ MESSAGES = {
         "weekly_report": "📊 **Weekly Report**\n\n💰 Income: +{income}\n💸 Expenses: -{expense}\n📈 Balance: {balance}\n\n✅ Habits completed: {habits_done}/{habits_total}\n🔥 Best streak: {best_streak} days",
         "settings_menu": "⚙️ **Settings**\n\nNotifications: {notif_status}\nLanguage: {lang}",
         "toggle_notifications": "🔔 Toggle notifications",
-        "help": "📖 **Help**\n\n/start — Main menu\n/app — Open app\n/settings — Settings\n/stats — Your stats\n\nSupport: @your_support",
+        "help": "📖 **Help**\n\n/start — Main menu\n/app — Open app\n/settings — Settings\n/stats — Your stats\n/mood — Mood Calendar\n\nSupport: @your_support",
+        "ask_mood": "🎭 **How was your day?**\n\nRate your mood:",
+        "mood_saved": "✅ Mood saved: {mood}\n\nThanks for checking in!",
+        "mood_calendar_title": "📅 **Your Mood Calendar**\n\n",
+        "spending_alert": "💸 **Spending Alert!**\n\nYou spent **{amount}** today, which is significantly higher than your average ({avg}).\n\nJust keeping you posted! 📉",
     },
     "es": {
         "welcome": "👋 ¡Hola, {name}!\n\n🚀 Bienvenido a **Life Tracker** — tu asistente personal para gestionar finanzas, hábitos y metas!\n\n✨ **Funciones:**\n💰 Seguimiento de ingresos y gastos\n🎯 Establecer y controlar metas\n✅ Rastreador de hábitos con recordatorios\n📊 Análisis y estadísticas\n📝 Notas\n\n👇 Toca el botón para abrir la app:",
@@ -110,12 +127,16 @@ MESSAGES = {
         "notifications_on": "🔔 Notificaciones activadas",
         "notifications_off": "🔕 Notificaciones desactivadas",
         "habit_reminder": "⏰ ¡Recordatorio!\n\nNo has completado el hábito **{habit}** hoy.\n\n¡Abre la app y márcalo! 💪",
-        "habit_completed": "🎉 ¡Excelente!\n\n¡Hábito **{habit}** completado!\n\n🔥 ¡Sigue así! ¡Tu racha continúa!",
+        "habit_completed": "🎉 ¡Excelente!\n\n¡Hábito **{habit}** completado!\n\n�� ¡Sigue así! ¡Tu racha continúa!",
         "streak_alert": "🔥 ¡Alerta!\n\n¡Tu racha de **{days}** días en **{habit}** puede romperse!\n\n¡No olvides marcarlo hoy!",
         "weekly_report": "📊 **Informe Semanal**\n\n💰 Ingresos: +{income}\n💸 Gastos: -{expense}\n📈 Balance: {balance}\n\n✅ Hábitos completados: {habits_done}/{habits_total}\n🔥 Mejor racha: {best_streak} días",
         "settings_menu": "⚙️ **Ajustes**\n\nNotificaciones: {notif_status}\nIdioma: {lang}",
         "toggle_notifications": "🔔 Activar/Desactivar notificaciones",
-        "help": "📖 **Ayuda**\n\n/start — Menú principal\n/app — Abrir app\n/settings — Ajustes\n/stats — Tus estadísticas\n\nSoporte: @your_support",
+        "help": "📖 **Ayuda**\n\n/start — Menú principal\n/app — Abrir app\n/settings — Ajustes\n/stats — Tus estadísticas\n/mood — Calendario de humor\n\nSoporte: @your_support",
+        "ask_mood": "🎭 **¿Qué tal tu día?**\n\nCalifica tu estado de ánimo:",
+        "mood_saved": "✅ Estado de ánimo guardado: {mood}\n\n¡Gracias!",
+        "mood_calendar_title": "📅 **Tu Calendario de Humor**\n\n",
+        "spending_alert": "💸 **¡Alerta de Gasto!**\n\nHas gastado **{amount}** hoy, mucho más que tu promedio ({avg}).\n\n¡Solo para avisarte! 📉",
     }
 }
 
@@ -282,6 +303,100 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=reply_markup,
                 parse_mode="Markdown"
             )
+        
+        elif data.startswith("mood_"):
+            # Format: mood_{score}
+            score = int(data.split("_")[1])
+            today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            # Save to DB
+            result = await session.execute(
+                select(MoodEntry).where(
+                    MoodEntry.telegram_id == user.id,
+                    MoodEntry.date == today
+                )
+            )
+            existing_entry = result.scalar_one_or_none()
+            
+            if existing_entry:
+                existing_entry.score = score
+            else:
+                new_entry = MoodEntry(telegram_id=user.id, date=today, score=score)
+                session.add(new_entry)
+            
+            await session.commit()
+            
+            # Visual feedback
+            mood_map = {1: "😫", 2: "😕", 3: "😐", 4: "🙂", 5: "🤩"}
+            lang = db_user.language
+            await query.edit_message_text(
+                get_msg(lang, "mood_saved").format(mood=mood_map.get(score, ""))
+            )
+
+async def mood_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == user.id)
+        )
+        db_user = result.scalar_one_or_none()
+        lang = db_user.language if db_user else "ru"
+        
+        # Get last 30 days of moods
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        mood_result = await session.execute(
+            select(MoodEntry)
+            .where(
+                MoodEntry.telegram_id == user.id,
+                MoodEntry.date >= thirty_days_ago
+            )
+            .order_by(MoodEntry.date)
+        )
+        moods = mood_result.scalars().all()
+        
+    mood_map = {1: "🟥", 2: "🟧", 3: "🟨", 4: "🟩", 5: "🌟"}
+    
+    # Simple text representation (can be improved to a real grid)
+    calendar_text = get_msg(lang, "mood_calendar_title")
+    
+    if not moods:
+        calendar_text += "No data yet."
+    else:
+        for entry in moods:
+            date_str = entry.date.strftime("%d.%m")
+            emoji = mood_map.get(entry.score, "❓")
+            calendar_text += f"{date_str}: {emoji}\n"
+            
+    await update.message.reply_text(calendar_text, parse_mode="Markdown")
+
+async def force_mood_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Debug command to force mood check message"""
+    user = update.effective_user
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("😫", callback_data="mood_1"),
+            InlineKeyboardButton("😕", callback_data="mood_2"),
+            InlineKeyboardButton("😐", callback_data="mood_3"),
+            InlineKeyboardButton("🙂", callback_data="mood_4"),
+            InlineKeyboardButton("🤩", callback_data="mood_5"),
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == user.id)
+        )
+        db_user = result.scalar_one_or_none()
+        lang = db_user.language if db_user else "ru"
+
+    await update.message.reply_text(
+        get_msg(lang, "ask_mood"),
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
 
 # ==================== SCHEDULED JOBS ====================
 async def send_habit_reminders(app: Application):
@@ -409,6 +524,41 @@ async def check_habit_completions(app: Application):
             except Exception as e:
                 logger.error(f"Error checking completion for {reminder.telegram_id}: {e}")
 
+async def ask_mood_checkin(app: Application):
+    """Ask users for their mood at 21:00 user local time"""
+    logger.info("Running mood checkin job...")
+    
+    async with async_session() as session:
+        # Get all users with notifications enabled
+        result = await session.execute(
+            select(User).where(User.notifications_enabled == True)
+        )
+        users = result.scalars().all()
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("😫", callback_data="mood_1"),
+                InlineKeyboardButton("😕", callback_data="mood_2"),
+                InlineKeyboardButton("😐", callback_data="mood_3"),
+                InlineKeyboardButton("🙂", callback_data="mood_4"),
+                InlineKeyboardButton("🤩", callback_data="mood_5"),
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        for user in users:
+            try:
+                lang = user.language
+                await app.bot.send_message(
+                    chat_id=user.telegram_id,
+                    text=get_msg(lang, "ask_mood"),
+                    reply_markup=reply_markup,
+                    parse_mode="Markdown"
+                )
+                logger.info(f"Sent mood checkin to {user.telegram_id}")
+            except Exception as e:
+                logger.error(f"Error sending mood checkin to {user.telegram_id}: {e}")
+
 # ==================== API MODELS ====================
 class SyncData(BaseModel):
     telegram_id: int
@@ -432,6 +582,8 @@ async def lifespan(app: FastAPI):
     bot_app.add_handler(CommandHandler("app", app_command))
     bot_app.add_handler(CommandHandler("settings", settings_command))
     bot_app.add_handler(CommandHandler("help", help_command))
+    bot_app.add_handler(CommandHandler("mood", mood_command))
+    bot_app.add_handler(CommandHandler("checkmood", force_mood_check)) # Debug
     bot_app.add_handler(CallbackQueryHandler(callback_handler))
     
     # Start scheduler
@@ -451,6 +603,14 @@ async def lifespan(app: FastAPI):
         CronTrigger(minute="*/30"),
         args=[bot_app],
         id="check_completions"
+    )
+
+    # Mood checkin at 21:00
+    scheduler.add_job(
+        ask_mood_checkin,
+        CronTrigger(hour=21, minute=0),
+        args=[bot_app],
+        id="mood_checkin"
     )
     
     scheduler.start()
@@ -519,6 +679,56 @@ async def sync_data(sync: SyncData, x_api_key: str = Header(None)):
             .where(User.telegram_id == sync.telegram_id)
             .values(last_sync=datetime.utcnow(), timezone_offset=sync.timezone_offset)
         )
+
+        # ================= SMART SPENDER ALERT LOGIC =================
+        try:
+            transactions = sync.data.get("transactions", [])
+            if transactions:
+                today_str = datetime.utcnow().strftime("%Y-%m-%d")
+                thirty_days_ago = (datetime.utcnow() - timedelta(days=30)).timestamp()
+                
+                # Calculate today's spend
+                today_spend = sum(
+                    t.get("amount", 0) for t in transactions 
+                    if t.get("date", "").startswith(today_str) and t.get("type") == "expense"
+                )
+                
+                # Calculate average daily spend (simple approximation)
+                total_past_spend = sum(
+                    t.get("amount", 0) for t in transactions
+                    if t.get("type") == "expense" 
+                )
+                # Avoid division by zero, assume at least 1 day if data exists
+                days_tracked = 30 # Simplified for now, usually would be (max_date - min_date)
+                avg_daily_spend = total_past_spend / days_tracked if days_tracked > 0 else 0
+                
+                # Thresholds
+                if today_spend > 50 and today_spend > (avg_daily_spend * 1.5):
+                     # Send Alert
+                    # We need to get the bot app instance or use a raw bot request.
+                    # Since we are in FastAPI, we don't have direct access to 'app' from lifespan easily here without globals or state.
+                    # But we can use the bot token directly.
+                    from telegram import Bot
+                    bot = Bot(token=BOT_TOKEN)
+                    
+                    # Get user lang
+                    user_result = await session.execute(select(User).where(User.telegram_id == sync.telegram_id))
+                    db_user = user_result.scalar_one_or_none()
+                    if db_user and db_user.notifications_enabled:
+                        lang = db_user.language
+                        await bot.send_message(
+                            chat_id=sync.telegram_id,
+                            text=get_msg(lang, "spending_alert").format(
+                                amount=f"${today_spend:.2f}",
+                                avg=f"${avg_daily_spend:.2f}"
+                            ),
+                            parse_mode="Markdown"
+                        )
+                        logger.info(f"Sent spending alert to {sync.telegram_id}")
+
+        except Exception as e:
+            logger.error(f"Error in smart spender logic: {e}")
+        # =============================================================
         
         await session.commit()
     
