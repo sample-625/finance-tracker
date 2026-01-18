@@ -6,3 +6,4 @@ export default defineConfig({
     plugins: [react()],
     base: '/', // Use '/' for Vercel, '/finance-tracker/' for GitHub Pages
 })
+// Trigger Vercel rebuild
