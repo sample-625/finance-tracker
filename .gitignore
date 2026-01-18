@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+deploy_key
+deploy_key.pub
+venv/
+.DS_Store
