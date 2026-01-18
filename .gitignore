@@ -5,3 +5,7 @@ deploy_key
 deploy_key.pub
 venv/
 .DS_Store
+node_modules/
+webapp/node_modules/
+dist/
+webapp/dist/
