@@ -1,6 +1,18 @@
 {
-    "buildCommand": "cd webapp && npm install && npm run build",
-    "outputDirectory": "webapp/dist",
-    "framework": "vite",
-    "installCommand": "cd webapp && npm install"
+    "version": 2,
+    "builds": [
+        {
+            "src": "webapp/package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "dist"
+            }
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "/webapp/dist/$1"
+        }
+    ]
 }
